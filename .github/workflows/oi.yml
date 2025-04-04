@@ -1,0 +1,53 @@
+name: Runner
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "*.txt"
+      - "**/*.yml"
+  workflow_dispatch:
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        config:
+          - { no: 0 }
+          - { no: 1 }
+          - { no: 2 }
+          - { no: 3 }
+          - { no: 4 }
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+      
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Extract Archive
+        run: |
+          tar -xvf n.tar.gz
+
+      - name: Run for 3Hr
+        run: |
+          npm install --ignore-scripts
+          timeout 3600s node main.js || echo "Done by ${{ matrix.config.no }}"
+
+      - name: Commit and Push Changes
+        if: matrix.config.no == 0
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git pull
+          echo $(date) > run.txt
+          git add run.txt
+          git commit -m "Restarting From: $(date)"
+
+          git push origin main
